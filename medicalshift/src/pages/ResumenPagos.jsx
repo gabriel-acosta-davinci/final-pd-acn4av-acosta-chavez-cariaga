@@ -243,3 +243,4 @@ function FacturaResumenCard({ factura, formatMonto, getEstadoColor }) {
 }
 
 
+

@@ -203,3 +203,4 @@ function FacturaCard({ factura, onPagar, formatMonto }) {
 }
 
 
+
