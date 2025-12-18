@@ -9,9 +9,7 @@ export default function UserCard({ user }) {
         );
     }
 
-    const fullName = user.nombre && user.apellido 
-        ? `${user.nombre} ${user.apellido}` 
-        : user.nombre || user.email || "Usuario";
+    const fullName = user.name || user.email || "Usuario";
 
     return (
         <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">

@@ -97,9 +97,7 @@ export default function Perfil() {
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-gray-900">
-                                {user?.nombre && user?.apellido
-                                    ? `${user.nombre} ${user.apellido}`
-                                    : user?.nombre || user?.email || "Usuario"}
+                                {user?.name || user?.email || "Usuario"}
                             </h2>
                             <p className="text-gray-600">{user?.email}</p>
                             {user?.associateNumber && (

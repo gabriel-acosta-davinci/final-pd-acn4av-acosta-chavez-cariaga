@@ -9,10 +9,15 @@ export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Función para limpiar sesión
-    const clearSession = () => {
-        authService.logout();
-        setUser(null);
-        setIsAuthenticated(false);
+    const clearSession = async () => {
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+        } finally {
+            setUser(null);
+            setIsAuthenticated(false);
+        }
     };
 
     // Cargar usuario al iniciar
@@ -89,8 +94,8 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        clearSession();
+    const logout = async () => {
+        await clearSession();
     };
 
     const updateUser = (userData) => {

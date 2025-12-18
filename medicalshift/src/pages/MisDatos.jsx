@@ -72,11 +72,17 @@ export default function MisDatos() {
     const formatDateOfBirth = (dateOfBirth) => {
         if (!dateOfBirth) return "No especificada";
         try {
+            // Si viene como objeto con _seconds (Firebase timestamp)
             if (dateOfBirth._seconds) {
                 const date = new Date(dateOfBirth._seconds * 1000);
                 return date.toLocaleDateString("es-AR");
             }
+            // Si viene como string (formato ISO o Y-m-d)
             if (typeof dateOfBirth === "string") {
+                const date = new Date(dateOfBirth);
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleDateString("es-AR");
+                }
                 return dateOfBirth;
             }
             return "No especificada";
@@ -133,9 +139,7 @@ export default function MisDatos() {
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Nombre Completo</label>
                                 <p className="text-gray-900 mt-1">
-                                    {displayUser?.nombre && displayUser?.apellido
-                                        ? `${displayUser.nombre} ${displayUser.apellido}`
-                                        : displayUser?.nombre || displayUser?.email || "No especificado"}
+                                    {displayUser?.name || displayUser?.email || "No especificado"}
                                 </p>
                             </div>
                             <div>

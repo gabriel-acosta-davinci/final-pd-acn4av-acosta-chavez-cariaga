@@ -29,46 +29,71 @@ export default function Seguridad() {
         if (user) {
             // Cargar email del usuario por defecto
             setEmailRecuperacion(user.email || "");
-            // El token podría venir del usuario, pero en Android se genera localmente
-            // Por ahora lo dejamos vacío o podemos generar uno inicial
         }
     }, [user]);
 
-    const handleEnviarCorreo = async () => {
-        if (!emailRecuperacion || !emailRecuperacion.includes("@")) {
-            setError("Ingresá un email válido");
-            return;
-        }
+    // Cargar y actualizar el token digital cada 30 segundos
+    useEffect(() => {
+        if (!isAuthenticated) return;
 
+        // Función para obtener el token del servidor
+        const fetchDigitalToken = async () => {
+            try {
+                const response = await authService.getDigitalToken();
+                if (response.digitalToken) {
+                    setToken(response.digitalToken);
+                }
+            } catch (err) {
+                console.error("Error obteniendo token digital:", err);
+            }
+        };
+
+        // Cargar el token inmediatamente
+        fetchDigitalToken();
+
+        // Actualizar el token cada 30 segundos
+        const interval = setInterval(() => {
+            fetchDigitalToken();
+        }, 30000); // 30000 ms = 30 segundos
+
+        // Limpiar el intervalo cuando el componente se desmonte
+        return () => clearInterval(interval);
+    }, [isAuthenticated]);
+
+    const handleEnviarCorreoVerificacion = async () => {
         try {
             setLoading(true);
             setError("");
             setSuccess("");
-            await authService.recovery(emailRecuperacion);
-            setSuccess(`Correo de recuperación enviado a ${emailRecuperacion}`);
+            const response = await authService.sendVerificationEmail();
+            setSuccess(response.message || "Se ha enviado un email de verificación. Por favor, revisa tu bandeja de entrada.");
         } catch (err) {
-            console.error("Error enviando correo:", err);
-            setError(err.message || "Error al enviar el correo de recuperación");
+            console.error("Error enviando correo de verificación:", err);
+            setError(err.message || "Error al enviar el correo de verificación");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleGenerarToken = () => {
-        // Generar token de 3 dígitos como en Android
-        const nuevoToken = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
-        setToken(nuevoToken);
-        setSuccess(`Nuevo token generado: ${nuevoToken}`);
-        // Aquí podrías guardar el token en el backend si es necesario
-    };
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
         setError("");
         setSuccess("");
 
+        // Validaciones en el frontend
+        if (!passwordData.currentPassword) {
+            setError("La contraseña actual es requerida");
+            return;
+        }
+
         if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
             setError("La nueva contraseña debe tener al menos 6 caracteres");
+            return;
+        }
+
+        if (passwordData.newPassword === passwordData.currentPassword) {
+            setError("La nueva contraseña debe ser diferente a la contraseña actual");
             return;
         }
 
@@ -79,7 +104,11 @@ export default function Seguridad() {
 
         try {
             setLoading(true);
-            await authService.updatePassword(passwordData.newPassword);
+            await authService.updatePassword(
+                passwordData.currentPassword,
+                passwordData.newPassword,
+                passwordData.confirmPassword
+            );
             setSuccess("Contraseña actualizada exitosamente");
             setPasswordData({
                 currentPassword: "",
@@ -89,7 +118,13 @@ export default function Seguridad() {
             setShowChangePassword(false);
         } catch (err) {
             console.error("Error actualizando contraseña:", err);
-            setError(err.message || "Error al actualizar la contraseña");
+            // Manejar errores del backend
+            if (err.messages && typeof err.messages === 'object') {
+                const errorMessages = Object.values(err.messages).flat();
+                setError(errorMessages.join(', ') || "Error al actualizar la contraseña");
+            } else {
+                setError(err.message || err.error || "Error al actualizar la contraseña");
+            }
         } finally {
             setLoading(false);
         }
@@ -135,60 +170,59 @@ export default function Seguridad() {
                 <div className="space-y-6">
                     {/* Token de Seguridad */}
                     <div className="bg-white rounded-xl shadow-md p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Token de Seguridad</h2>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Token Digital de Seguridad</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Token Actual
                                 </label>
                                 <div className="flex items-center gap-4">
-                                    <input
-                                        type="text"
-                                        value={token}
-                                        readOnly
-                                        placeholder="No generado"
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 font-mono text-lg"
-                                    />
-                                    <button
-                                        onClick={handleGenerarToken}
-                                        className="bg-sky-500 text-white px-6 py-2 rounded-md hover:bg-sky-600 font-medium"
-                                    >
-                                        Generar Token
-                                    </button>
+                                    <div className="flex-1 px-4 py-3 border-2 border-sky-500 rounded-md bg-gray-50 text-gray-900 font-mono text-3xl font-bold text-center tracking-widest">
+                                        {token || "---"}
+                                    </div>
                                 </div>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    El token es un código de seguridad de 3 dígitos que puedes usar para verificación adicional.
+                                    Este token de 3 dígitos se regenera automáticamente cada 30 segundos mientras tu sesión esté activa. 
+                                    Úsalo para acceder a tu credencial de obra social.
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    El token se actualiza automáticamente. No es necesario recargar la página.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Recuperación de Contraseña */}
+                    {/* Verificación de Correo Electrónico */}
                     <div className="bg-white rounded-xl shadow-md p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recuperación de Contraseña</h2>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Verificar Correo Electrónico</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Email de Recuperación
+                                    Email de Verificación
                                 </label>
                                 <div className="flex items-center gap-4">
                                     <input
                                         type="email"
                                         value={emailRecuperacion}
-                                        onChange={(e) => setEmailRecuperacion(e.target.value)}
-                                        placeholder="tu@email.com"
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                        readOnly
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
                                     />
                                     <button
-                                        onClick={handleEnviarCorreo}
+                                        onClick={handleEnviarCorreoVerificacion}
                                         disabled={loading}
                                         className="bg-sky-500 text-white px-6 py-2 rounded-md hover:bg-sky-600 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
                                     >
-                                        {loading ? "Enviando..." : "Enviar Correo"}
+                                        {loading ? "Enviando..." : "Enviar Email de Verificación"}
                                     </button>
                                 </div>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    Se enviará un correo con instrucciones para recuperar tu contraseña.
+                                    Se enviará un correo con un enlace para verificar tu dirección de email. 
+                                    {user && !user.emailVerifiedAt && (
+                                        <span className="text-yellow-600 font-medium block mt-1">⚠️ Tu email aún no está verificado.</span>
+                                    )}
+                                    {user && user.emailVerifiedAt && (
+                                        <span className="text-green-600 font-medium block mt-1">✓ Tu email está verificado.</span>
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -210,6 +244,22 @@ export default function Seguridad() {
 
                         {showChangePassword && (
                             <form onSubmit={handleChangePassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Contraseña Actual <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={passwordData.currentPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                                        }
+                                        placeholder="Ingresa tu contraseña actual"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                        required
+                                        disabled={loading}
+                                    />
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Nueva Contraseña <span className="text-red-500">*</span>
@@ -237,7 +287,7 @@ export default function Seguridad() {
                                         onChange={(e) =>
                                             setPasswordData({ ...passwordData, confirmPassword: e.target.value })
                                         }
-                                        placeholder="Repetir contraseña"
+                                        placeholder="Repetir nueva contraseña"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                         required
                                         disabled={loading}

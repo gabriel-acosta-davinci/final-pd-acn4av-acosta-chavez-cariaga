@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
-import specialtiesData from "../data/urgencySpecialties.json";
+import cartillaService from "../services/cartillaService";
 
 export default function useUrgencySpecialties() {
     const [specialties, setSpecialties] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setSpecialties(specialtiesData);
+        const loadSpecialties = async () => {
+            try {
+                const response = await cartillaService.getSpecialties('urgency');
+                const specialtiesList = response.specialties || [];
+                setSpecialties(specialtiesList.map(s => s.nombre));
+                setLoading(false);
+            } catch (error) {
+                console.error("Error cargando especialidades de urgencia:", error);
+                setLoading(false);
+            }
+        };
+
+        loadSpecialties();
     }, []);
 
-    return { specialties };
+    return { specialties, loading };
 }

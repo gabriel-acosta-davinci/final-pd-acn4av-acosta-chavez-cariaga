@@ -16,7 +16,7 @@ export default function NuevaGestion() {
 
     useEffect(() => {
         if (user) {
-            setUserName(user.fullName || user.name || "Usuario");
+            setUserName(user.name || "Usuario");
         }
     }, [user]);
 

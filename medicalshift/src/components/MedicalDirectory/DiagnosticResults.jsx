@@ -1,13 +1,46 @@
-import { useState } from "react";
-import providersByDiagnostic from "../../data/providersByDiagnostic.json";
+import { useState, useEffect } from "react";
+import cartillaService from "../../services/cartillaService";
 import GoogleMapEmbed from "./GoogleMapEmbed";
 
 export default function DiagnosticResults({ filters }) {
-    const { specialty, localidad } = filters;
-    const data = providersByDiagnostic[localidad]?.[specialty];
+    const { specialty, localidad, plan } = filters;
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [selectedAddress, setSelectedAddress] = useState(null);
 
-    if (!data) {
+    useEffect(() => {
+        const loadProviders = async () => {
+            if (!specialty || !localidad) {
+                setData(null);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const response = await cartillaService.getProvidersGrouped('diagnostic', localidad, plan);
+                const providers = response[localidad]?.[specialty] || null;
+                setData(providers);
+            } catch (error) {
+                console.error("Error cargando providers:", error);
+                setData(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProviders();
+    }, [specialty, localidad, plan]);
+
+    if (loading) {
+        return (
+            <div className="mt-12 text-center text-gray-500">
+                Cargando...
+            </div>
+        );
+    }
+
+    if (!data || (Array.isArray(data) && data.length === 0)) {
         return (
             <div className="mt-12 text-center text-gray-500">
                 No se encontraron resultados

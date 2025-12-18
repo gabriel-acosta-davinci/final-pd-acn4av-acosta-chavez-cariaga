@@ -10,6 +10,9 @@ import Dashboard from "../pages/Dashboard";
 import Gestiones from "../pages/Gestiones";
 import Perfil from "../pages/Perfil";
 import ProtectedRoute from "../components/ProtectedRoute";
+import VerificacionExito from "../pages/VerificacionExito";
+import VerificacionError from "../pages/VerificacionError";
+import VerificacionExpirado from "../pages/VerificacionExpirado";
 
 export const publicRoutes = [
     { path: "/", element: <Home /> },
@@ -18,6 +21,9 @@ export const publicRoutes = [
     { path: "/MedicalDirectory", element: <MedicalDirectory /> },
     { path: "/Plans", element: <Plans /> },
     { path: "/Download", element: <Download /> },
+    { path: "/verificacion/exito", element: <VerificacionExito /> },
+    { path: "/verificacion/error", element: <VerificacionError /> },
+    { path: "/verificacion/expirado", element: <VerificacionExpirado /> },
     { path: "/*", element: <NotFound /> },
 ];
 

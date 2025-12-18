@@ -20,6 +20,25 @@ export default function BaseGestionModal({
     const [error, setError] = useState("");
     const fileInputRefs = useRef([]);
 
+    // Constante para el tamaño máximo (10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB en bytes
+
+    // Función para verificar si hay archivos con problemas
+    const hasInvalidFiles = () => {
+        return archivos.some(archivo => {
+            if (!archivo) return false;
+            return archivo.size > MAX_FILE_SIZE;
+        });
+    };
+
+    // Función para verificar si hay al menos un archivo válido
+    const hasValidFile = () => {
+        return archivos.some(archivo => {
+            if (!archivo) return false;
+            return archivo.size <= MAX_FILE_SIZE;
+        });
+    };
+
     const handleFileChange = (index, event) => {
         const file = event.target.files[0];
         if (file) {
@@ -27,12 +46,21 @@ export default function BaseGestionModal({
             const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
             if (!allowedTypes.includes(file.type)) {
                 setError('Formato de archivo no permitido. Formatos permitidos: PDF, PNG, JPG');
+                // Limpiar el archivo inválido
+                if (fileInputRefs.current[index]) {
+                    fileInputRefs.current[index].value = "";
+                }
                 return;
             }
 
             // Validar tamaño (10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                setError('El archivo es demasiado grande (máximo 10MB)');
+            if (file.size > MAX_FILE_SIZE) {
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                setError(`El archivo pesa más de 10 MB. Tamaño actual: ${fileSizeMB} MB. Por favor, selecciona un archivo más pequeño.`);
+                // Limpiar el archivo inválido
+                if (fileInputRefs.current[index]) {
+                    fileInputRefs.current[index].value = "";
+                }
                 return;
             }
 
@@ -50,6 +78,10 @@ export default function BaseGestionModal({
         if (fileInputRefs.current[index]) {
             fileInputRefs.current[index].value = "";
         }
+        // Limpiar error si se elimina un archivo problemático
+        if (error && error.includes('pesa más de 10 MB')) {
+            setError("");
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -65,8 +97,20 @@ export default function BaseGestionModal({
                 return;
             }
 
-            // Obtener el primer archivo disponible (o null si no hay)
+            // Validar que no haya archivos inválidos
+            if (hasInvalidFiles()) {
+                setError("Hay archivos que pesan más de 10 MB. Por favor, elimínalos o selecciona archivos más pequeños.");
+                setLoading(false);
+                return;
+            }
+
+            // Validar que haya al menos un archivo
             const archivo = archivos.find(a => a !== null && a !== undefined) || null;
+            if (!archivo) {
+                setError("Debes seleccionar al menos un archivo para crear la gestión.");
+                setLoading(false);
+                return;
+            }
 
             // Crear gestión y subir archivo
             await crearGestionYSubirArchivo(nombreGestion, fechaAplicacion || null, archivo);
@@ -206,8 +250,21 @@ export default function BaseGestionModal({
                                 )}
                             </div>
                             {archivos[index] && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {archivos[index].name} ({(archivos[index].size / 1024).toFixed(2)} KB)
+                                <p className={`text-xs mt-1 ${
+                                    archivos[index].size > MAX_FILE_SIZE 
+                                        ? 'text-red-600 font-semibold' 
+                                        : 'text-gray-500'
+                                }`}>
+                                    {archivos[index].name} ({
+                                        archivos[index].size > 1024 * 1024
+                                            ? `${(archivos[index].size / 1024 / 1024).toFixed(2)} MB`
+                                            : `${(archivos[index].size / 1024).toFixed(2)} KB`
+                                    })
+                                    {archivos[index].size > MAX_FILE_SIZE && (
+                                        <span className="block text-red-600 font-semibold mt-1">
+                                            ⚠ Este archivo excede el límite de 10 MB
+                                        </span>
+                                    )}
                                 </p>
                             )}
                         </div>
@@ -225,8 +282,15 @@ export default function BaseGestionModal({
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || hasInvalidFiles() || !hasValidFile()}
                             className="flex-1 px-6 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={
+                                hasInvalidFiles() 
+                                    ? "Hay archivos que exceden 10 MB. Elimínalos para continuar."
+                                    : !hasValidFile()
+                                    ? "Debes seleccionar al menos un archivo para crear la gestión."
+                                    : ""
+                            }
                         >
                             {loading ? "Enviando..." : "Solicitar"}
                         </button>

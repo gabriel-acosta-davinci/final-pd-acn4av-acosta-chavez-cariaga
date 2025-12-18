@@ -27,6 +27,14 @@ export const gestionService = {
         
         return await apiClient.get(endpoint);
     },
+
+    /**
+     * Eliminar una gestión
+     * @param {string|number} gestionId - ID de la gestión
+     */
+    async delete(gestionId) {
+        return await apiClient.delete(`/gestiones/${gestionId}`);
+    },
 };
 
 export default gestionService;

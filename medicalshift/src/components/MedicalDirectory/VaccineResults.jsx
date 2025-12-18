@@ -1,13 +1,45 @@
-import { useState } from "react";
-import providersByVaccine from "../../data/providersByVaccine.json";
+import { useState, useEffect } from "react";
+import cartillaService from "../../services/cartillaService";
 import GoogleMapEmbed from "./GoogleMapEmbed";
 
 export default function VaccineResults({ filters }) {
     const { plan, localidad } = filters;
-    const data = providersByVaccine[localidad]?.[plan];
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [selectedAddress, setSelectedAddress] = useState(null);
 
-    if (!data) {
+    useEffect(() => {
+        const loadVaccines = async () => {
+            if (!localidad) {
+                setData(null);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const response = await cartillaService.searchVaccines({ localidad });
+                setData(response.vaccines || []);
+            } catch (error) {
+                console.error("Error cargando vacunatorios:", error);
+                setData(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadVaccines();
+    }, [localidad]);
+
+    if (loading) {
+        return (
+            <div className="mt-12 text-center text-gray-500">
+                Cargando...
+            </div>
+        );
+    }
+
+    if (!data || (Array.isArray(data) && data.length === 0)) {
         return (
             <div className="mt-12 text-center text-gray-500">
                 No se encontraron vacunatorios para tu búsqueda.

@@ -21,7 +21,7 @@ export default function Medicamentos() {
 
     useEffect(() => {
         if (user) {
-            setUserName(user.fullName || user.name || "Usuario");
+            setUserName(user.name || "Usuario");
         }
     }, [user]);
 

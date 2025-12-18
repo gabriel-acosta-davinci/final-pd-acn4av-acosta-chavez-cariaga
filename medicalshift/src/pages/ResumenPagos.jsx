@@ -48,12 +48,16 @@ export default function ResumenPagos() {
     };
 
     const formatMonto = (monto) => {
-        if (!monto && monto !== 0) return "$0.00";
+        // Convertir a número si es string o manejar null/undefined
+        const montoNum = typeof monto === 'string' ? parseFloat(monto) : monto;
+        if (montoNum === null || montoNum === undefined || isNaN(montoNum)) {
+            return "$0.00";
+        }
         return new Intl.NumberFormat("es-AR", {
             style: "currency",
             currency: "ARS",
             minimumFractionDigits: 2,
-        }).format(monto);
+        }).format(montoNum);
     };
 
     const getEstadoColor = (estado) => {
@@ -70,11 +74,17 @@ export default function ResumenPagos() {
     // Calcular totales
     const totalPendiente = facturas
         .filter((f) => f.estado?.toLowerCase() === "pendiente")
-        .reduce((sum, f) => sum + (f.monto || 0), 0);
+        .reduce((sum, f) => {
+            const monto = parseFloat(f.monto) || 0;
+            return sum + (isNaN(monto) ? 0 : monto);
+        }, 0);
     
     const totalPagado = facturas
         .filter((f) => f.estado?.toLowerCase() === "pagada")
-        .reduce((sum, f) => sum + (f.monto || 0), 0);
+        .reduce((sum, f) => {
+            const monto = parseFloat(f.monto) || 0;
+            return sum + (isNaN(monto) ? 0 : monto);
+        }, 0);
 
     if (authLoading || loading) {
         return (

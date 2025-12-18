@@ -1,25 +1,46 @@
-import { useState } from "react";
-import professionals from "../../data/professionals.json";
+import { useState, useEffect } from "react";
+import cartillaService from "../../services/cartillaService";
 import GoogleMapEmbed from "./GoogleMapEmbed";
 
 export default function ProfessionalResults({ filters }) {
-    const { specialty, localidad, nombre } = filters;
+    const { specialty, localidad, nombre, plan } = filters;
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [selectedAddress, setSelectedAddress] = useState(null);
 
-    // Filtrado base
-    let results = professionals.filter(
-        (p) =>
-            p.localidad === localidad &&
-            p.especialidad === specialty
-    );
+    useEffect(() => {
+        const loadProfessionals = async () => {
+            if (!specialty || !localidad) {
+                setResults([]);
+                setLoading(false);
+                return;
+            }
 
-    // Filtrado opcional por nombre o institución
-    if (nombre) {
-        const query = nombre.toLowerCase();
-        results = results.filter(
-            (p) =>
-                p.nombre.toLowerCase().includes(query) ||
-                p.institucion.toLowerCase().includes(query)
+            try {
+                setLoading(true);
+                const response = await cartillaService.searchProfessionals({
+                    specialty,
+                    localidad,
+                    nombre: nombre || undefined,
+                    plan: plan || undefined,
+                });
+                setResults(response.professionals || []);
+            } catch (error) {
+                console.error("Error cargando profesionales:", error);
+                setResults([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProfessionals();
+    }, [specialty, localidad, nombre, plan]);
+
+    if (loading) {
+        return (
+            <div className="mt-12 text-center text-gray-500">
+                Cargando...
+            </div>
         );
     }
 

@@ -4,8 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 export default function RegisterForm({ onSwitch }) {
     const [formData, setFormData] = useState({
-        nombre: "",
-        apellido: "",
+        name: "",
         numeroAsociado: "",
         documentNumber: "",
         email: "",
@@ -30,7 +29,7 @@ export default function RegisterForm({ onSwitch }) {
 
         try {
             // Validar que todos los campos estén completos
-            if (!formData.nombre || !formData.apellido || !formData.email || !formData.password || !formData.documentNumber) {
+            if (!formData.name || !formData.email || !formData.password || !formData.documentNumber) {
                 setError("Por favor complete todos los campos requeridos");
                 setLoading(false);
                 return;
@@ -63,20 +62,10 @@ export default function RegisterForm({ onSwitch }) {
             <form className="space-y-4" onSubmit={handleSubmit}>
                 <input
                     type="text"
-                    name="nombre"
-                    placeholder="Nombres"
+                    name="name"
+                    placeholder="Nombre completo"
                     className="w-full px-4 py-2 border rounded-md"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                />
-                <input
-                    type="text"
-                    name="apellido"
-                    placeholder="Apellidos"
-                    className="w-full px-4 py-2 border rounded-md"
-                    value={formData.apellido}
+                    value={formData.name}
                     onChange={handleChange}
                     required
                     disabled={loading}

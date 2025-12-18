@@ -42,24 +42,71 @@ export default function MisDocumentos() {
         }
     };
 
-    const handleDownload = async (document) => {
+    const handleDownload = async (doc) => {
         try {
-            const fileName = document.fileName || document.originalName;
-            if (!fileName) {
-                alert("No se puede descargar: nombre de archivo no disponible");
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("No estás autenticado. Por favor, inicia sesión nuevamente.");
                 return;
             }
 
-            const response = await documentService.getDocumentUrl(fileName);
-            if (response.url) {
-                // Abrir URL en nueva pestaña para descargar
-                window.open(response.url, '_blank');
-            } else {
-                alert("No se pudo obtener la URL de descarga");
+            // Obtener el ID de la gestión para construir la URL
+            const gestionId = doc.gestionId || doc.id;
+            if (!gestionId) {
+                alert("No se puede descargar: ID de gestión no disponible");
+                return;
             }
+
+            // Construir la URL del endpoint
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+            const downloadUrl = `${apiBaseUrl}/gestiones/${gestionId}/document`;
+
+            // Hacer la petición con el token de autenticación
+            const response = await fetch(downloadUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+                    return;
+                }
+                const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+                throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+            }
+
+            // Obtener el blob del archivo
+            const blob = await response.blob();
+            
+            // Obtener el nombre del archivo del header o usar uno por defecto
+            const contentDisposition = response.headers.get('content-disposition');
+            let fileName = doc.originalName || doc.fileName || 'documento';
+            
+            // Intentar extraer el nombre del archivo del header Content-Disposition
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (fileNameMatch && fileNameMatch[1]) {
+                    fileName = fileNameMatch[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Crear un enlace temporal para descargar el archivo
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpiar
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error("Error descargando documento:", err);
-            alert("Error al descargar el documento. Por favor, intenta nuevamente.");
+            alert(`Error al descargar el documento: ${err.message || 'Error desconocido'}`);
         }
     };
 
@@ -184,8 +231,8 @@ function DocumentCard({ document, onDownload }) {
     };
 
     const fileName = document.originalName || document.fileName || "Documento sin nombre";
-    const gestionId = document.gestionId;
-    const tipoGestion = gestionId ? `Gestión: ${gestionId}` : "Documento";
+    const gestionName = document.gestionName || document.nombre;
+    const tipoGestion = gestionName ? `Gestión: ${gestionName}` : "Documento";
     const fecha = formatDate(document.uploadedAt);
 
     return (

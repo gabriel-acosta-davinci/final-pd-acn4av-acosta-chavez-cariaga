@@ -19,7 +19,7 @@ export default function ReintegrosGestion() {
 
     useEffect(() => {
         if (user) {
-            setUserName(user.fullName || user.name || "Usuario");
+            setUserName(user.name || "Usuario");
             setUserCBU(user.cbu || "");
         }
     }, [user]);

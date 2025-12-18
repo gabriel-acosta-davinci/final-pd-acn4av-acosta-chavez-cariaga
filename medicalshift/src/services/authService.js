@@ -45,9 +45,17 @@ export const authService = {
     /**
      * Cerrar sesión
      */
-    logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    async logout() {
+        try {
+            // Llamar al backend para desactivar el token digital
+            await apiClient.post('/auth/logout');
+        } catch (error) {
+            console.error('Error al cerrar sesión en el servidor:', error);
+            // Continuar con el logout local incluso si falla el servidor
+        } finally {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
     },
 
     /**
@@ -89,10 +97,16 @@ export const authService = {
 
     /**
      * Actualizar contraseña (requiere autenticación)
+     * @param {string} currentPassword - Contraseña actual
      * @param {string} newPassword - Nueva contraseña
+     * @param {string} confirmPassword - Confirmación de nueva contraseña
      */
-    async updatePassword(newPassword) {
-        return await apiClient.put('/auth/password', { newPassword });
+    async updatePassword(currentPassword, newPassword, confirmPassword) {
+        return await apiClient.put('/auth/password', {
+            currentPassword,
+            newPassword,
+            confirmPassword
+        });
     },
 
     /**
@@ -115,6 +129,27 @@ export const authService = {
      */
     isAuthenticated() {
         return !!this.getToken();
+    },
+
+    /**
+     * Obtener el token digital actual del usuario autenticado
+     */
+    async getDigitalToken() {
+        return await apiClient.get('/auth/digital-token');
+    },
+
+    /**
+     * Enviar email de verificación
+     */
+    async sendVerificationEmail() {
+        return await apiClient.post('/auth/verify-email');
+    },
+
+    /**
+     * Obtener notificaciones del usuario
+     */
+    async getNotifications() {
+        return await apiClient.get('/auth/notifications');
     },
 };
 

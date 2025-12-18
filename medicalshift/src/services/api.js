@@ -48,7 +48,19 @@ class ApiClient {
             }
 
             if (!response.ok) {
-                throw new Error(data.error || `Error: ${response.statusText}`);
+                // Crear un error con más información
+                const error = new Error(data.error || `Error: ${response.statusText}`);
+                // Agregar detalles adicionales del error si existen
+                if (data.details) {
+                    error.details = data.details;
+                }
+                if (data.messages) {
+                    error.details = data.messages;
+                }
+                if (data.error) {
+                    error.error = data.error;
+                }
+                throw error;
             }
 
             return data;

@@ -1,13 +1,48 @@
-import { useState } from "react";
-import providersByPharmacy from "../../data/providersByPharmacy.json";
+import { useState, useEffect } from "react";
+import cartillaService from "../../services/cartillaService";
 import GoogleMapEmbed from "./GoogleMapEmbed";
 
 export default function PharmacyResults({ filters }) {
     const { plan, localidad } = filters;
-    const data = providersByPharmacy[localidad]?.[plan];
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [selectedAddress, setSelectedAddress] = useState(null);
 
-    if (!data) {
+    useEffect(() => {
+        const loadPharmacies = async () => {
+            if (!localidad) {
+                setData(null);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const response = await cartillaService.searchPharmacies({
+                    plan: plan || undefined,
+                    localidad,
+                });
+                setData(response.pharmacies || []);
+            } catch (error) {
+                console.error("Error cargando farmacias:", error);
+                setData(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadPharmacies();
+    }, [plan, localidad]);
+
+    if (loading) {
+        return (
+            <div className="mt-12 text-center text-gray-500">
+                Cargando...
+            </div>
+        );
+    }
+
+    if (!data || (Array.isArray(data) && data.length === 0)) {
         return (
             <div className="mt-12 text-center text-gray-500">
                 No se encontraron farmacias para tu búsqueda.
